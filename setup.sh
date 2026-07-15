@@ -1,6 +1,9 @@
 #!/bin/bash
 
-echo "🚀 Memulai instalasi Linux Starter Kit..."
+# Skrip langsung berhenti jika ada satu perintah yang eror
+set -e
+
+echo "🚀 Memulai instalasi Linux Starter Kit (Optimized for Ubuntu 24.04 Desktop)..."
 
 # ==========================================
 # 1. REPO UPDATER & DEPENDENCIES
@@ -38,7 +41,7 @@ sudo apt install -y composer
 echo "🟢 Menginstal NVM (Node Version Manager)..."
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
 
-# Memuat NVM ke sesi shell saat ini agar langsung bisa digunakan
+# Memuat NVM secara langsung ke dalam sesi skrip saat ini
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
@@ -47,16 +50,18 @@ nvm install --lts
 nvm use --lts
 
 # ==========================================
-# 5. MYSQL SERVER (Root Tanpa Password)
+# 5. MYSQL SERVER (Ubuntu 24.04 Native Setup)
 # ==========================================
 echo "🐬 Menginstal MySQL Server..."
-sudo apt install -y mysql-server
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y mysql-server
 
-echo "🐬 Memulai service MySQL..."
-sudo service mysql start
+echo "🐬 Memastikan Service MySQL Aktif & Berjalan..."
+sudo systemctl enable mysql
+sudo systemctl start mysql
 
-echo "🐬 Konfigurasi user root MySQL tanpa password..."
-sudo mysql -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY ''; FLUSH PRIVILEGES;"
+echo "🐬 Mengonfigurasi User Root Tanpa Password (Kompatibel dengan Laravel & Adminer)..."
+# Mengubah autentikasi ke mysql_native_password agar Laravel lama dan Adminer bisa masuk tanpa enkripsi sha2 yang ketat di lokal
+sudo mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY ''; FLUSH PRIVILEGES;"
 
 # ==========================================
 # 6. ADMINER SETUP
@@ -69,8 +74,9 @@ sudo wget "https://raw.githubusercontent.com/pepa-linha/Adminer-Design-Dark/mast
 # ==========================================
 # 7. DEV MENU ALIASES (BASHRC CONFIG)
 # ==========================================
-echo "🛠️ Menambahkan Custom Aliases (Dev Menu PHP & Adminer) ke ~/.bashrc..."
+echo "🛠️ Menambahkan Custom Aliases ke ~/.bashrc..."
 
+if ! grep -q "Dev Menu PHP" ~/.bashrc; then
 cat << 'EOF' >> ~/.bashrc
 
 # -- Dev Menu PHP --
@@ -82,27 +88,22 @@ alias phpcurrent='php -v'
 alias start-adminer='echo "🌐 Membuka Adminer di http://localhost:8080..." && php -S localhost:8080 -t /usr/share/adminer'
 
 EOF
+fi
 
 # ==========================================
 # 8. AI CLI TOOLS (OpenCode & Antigravity)
 # ==========================================
-echo "🤖 Menginstal AI CLI Tools (OpenCode & Antigravity CLI)..."
-npm install -g opencode antigravity-cli
+echo "🤖 Menginstal AI CLI Tools global..."
+npm install -g opencode
 
 # ==========================================
-# 9. TEXT EDITOR (Neovim)
+# 9. TEXT EDITORS (Neovim & Micro)
 # ==========================================
-echo "📝 Menginstal Text Editor (Neovim)..."
+echo "📝 Menginstal Text Editor (Neovim & Micro)..."
 sudo apt install -y neovim
 
-# ==========================================
-# 10. MODERN TUI EDITOR (Micro)
-# ==========================================
-echo "📝 Menginstal TUI Editor (Micro) - Sublime/VS Code feel..."
-# Mengunduh script instalasi resmi Micro dan memindahkannya ke bin agar bisa diakses global
 curl https://getmic.ro | bash
 sudo mv micro /usr/local/bin/
 
-echo "✅ Setup Selesai!"
-echo "🔄 Silakan jalankan 'source ~/.bashrc' atau restart terminal Anda."
-echo "💡 Gunakan perintah 'nvim <nama_file>' untuk Neovim atau 'micro <nama_file>' untuk editor bergaya Sublime."
+echo "✅ [SELESAI] Semua env berhasil dipasang di Ubuntu 24.04 Desktop Anda!"
+echo "🔄 Langkah terakhir, jalankan perintah ini di terminal: source ~/.bashrc"
