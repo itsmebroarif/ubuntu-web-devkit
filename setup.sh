@@ -55,33 +55,12 @@ log_step() {
     echo -e "  ${CYAN}→${NC} $*"
 }
 
-spinner() {
-    local pid=$1
-    local delay=0.1
-    local frames=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
-    
-    while kill -0 $pid 2>/dev/null; do
-        for frame in "${frames[@]}"; do
-            echo -ne "\r${CYAN}${frame}${NC} ${BOLD}Sedang memproses...${NC}"
-            sleep $delay
-        done
-    done
-    echo -ne "\r"
-}
-
 # =====================================================
 # UTILITY FUNCTIONS
 # =====================================================
 
 command_exists() {
     command -v "$1" >/dev/null 2>&1
-}
-
-check_root() {
-    if [[ $EUID -ne 0 ]]; then
-        log_error "Script ini memerlukan privilese sudo. Jalankan dengan 'sudo bash $0'"
-        exit 1
-    fi
 }
 
 require_command() {
@@ -173,6 +152,7 @@ install_dependencies() {
         "wget"
         "git"
         "build-essential"
+        "whiptail" # Komponen untuk UI Menu
     )
     
     execute_cmd "Instal ${#packages[@]} paket dependensi" \
@@ -405,6 +385,97 @@ ALIASES_EOF
     log_success "Custom aliases berhasil ditambahkan"
 }
 
+setup_arif_it_launcher() {
+    log_header "🚀 STEP 12: Creating arif-it TUI Launcher"
+    
+    log_section "Membangun script launcher Laragon-style..."
+    
+    cat << 'LAUNCHER_EOF' > /usr/local/bin/arif-it
+#!/bin/bash
+
+# Memastikan environment NVM termuat jika dibutuhkan Node
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+while true; do
+    CHOICE=$(whiptail --title "🚀 ARIF-IT WORKSTATION LAUNCHER" --menu "Laragon Alternative Menu\nPilih aksi pengembangan:" 22 65 12 \
+        "1" "🐘 Cek Status & Versi (PHP, Node, MySQL)" \
+        "2" "▶ Start MySQL Service" \
+        "3" "⏹ Stop MySQL Service" \
+        "4" "🗄️ Buka Adminer (Port 8080)" \
+        "5" "⚡ Start PHP Dev Server (Pilih Folder)" \
+        "6" "🔄 Switch Versi PHP (Global)" \
+        "7" "🪟 Buka Sesi Tmux Baru" \
+        "0" "❌ Keluar" 3>&1 1>&2 2>&3)
+
+    # Exit jika tekan Cancel atau ESC
+    if [ $? -ne 0 ]; then
+        clear
+        break
+    fi
+
+    case $CHOICE in
+        1)
+            PHP_VER=$(php -v | head -n 1)
+            NODE_VER=$(node -v 2>/dev/null || echo "Tidak terdeteksi")
+            MYSQL_STATUS=$(systemctl is-active mysql)
+            whiptail --title "Status Sistem" --msgbox "PHP:\n$PHP_VER\n\nNode.js:\n$NODE_VER\n\nMySQL Service:\n$MYSQL_STATUS" 15 60
+            ;;
+        2)
+            sudo systemctl start mysql
+            whiptail --title "Sukses" --msgbox "MySQL Service berhasil di-start!" 8 45
+            ;;
+        3)
+            sudo systemctl stop mysql
+            whiptail --title "Sukses" --msgbox "MySQL Service berhasil dihentikan!" 8 45
+            ;;
+        4)
+            echo "========================================="
+            echo "🌐 Menjalankan Adminer di Port 8080"
+            echo "Buka browser: http://localhost:8080"
+            echo "Tekan CTRL+C untuk menghentikan server."
+            echo "========================================="
+            php -S localhost:8080 -t /usr/share/adminer
+            ;;
+        5)
+            DIR=$(whiptail --title "PHP Dev Server" --inputbox "Masukkan path direktori untuk di-serve\n(Tekan OK untuk path saat ini):" 10 50 "$PWD" 3>&1 1>&2 2>&3)
+            if [ $? -eq 0 ]; then
+                if [ -d "$DIR" ]; then
+                    echo "========================================="
+                    echo "⚡ Menjalankan PHP Server di Port 8000"
+                    echo "📁 Direktori: $DIR"
+                    echo "Buka browser: http://localhost:8000"
+                    echo "Tekan CTRL+C untuk menghentikan server."
+                    echo "========================================="
+                    cd "$DIR" && php -S localhost:8000
+                else
+                    whiptail --title "Error" --msgbox "Direktori tidak ditemukan!" 8 40
+                fi
+            fi
+            ;;
+        6)
+            clear
+            sudo update-alternatives --config php
+            echo -e "\nTekan Enter untuk kembali ke menu utama..."
+            read
+            ;;
+        7)
+            clear
+            echo "Membuka Tmux..."
+            tmux
+            ;;
+        0)
+            clear
+            break
+            ;;
+    esac
+done
+LAUNCHER_EOF
+
+    execute_cmd "Set permission executable untuk arif-it" chmod +x /usr/local/bin/arif-it
+    log_success "Launcher 'arif-it' siap digunakan!"
+}
+
 show_summary() {
     log_header "✨ INSTALASI SELESAI!"
     
@@ -422,15 +493,12 @@ show_summary() {
     echo ""
     echo -e "${YELLOW}${BOLD}Langkah Selanjutnya:${NC}"
     echo -e "  1. ${CYAN}source ~/.bashrc${NC} (atau restart terminal)"
-    echo -e "  2. Gunakan ${GREEN}selectphp${NC} untuk switch PHP version"
-    echo -e "  3. Gunakan ${GREEN}start-adminer${NC} untuk akses database"
+    echo -e "  2. Ketik perintah sakti: ${GREEN}${BOLD}arif-it${NC} untuk membuka TUI Launcher"
     echo ""
-    echo -e "${MAGENTA}${BOLD}Tips:${NC}"
-    echo -e "  • Edit dengan Neovim: ${GREEN}nvim <file>${NC}"
-    echo -e "  • Edit dengan Micro: ${GREEN}micro <file>${NC}"
-    echo -e "  • Split terminal multiplexer: ${GREEN}tmux${NC}"
-    echo -e "  • Start PHP server: ${GREEN}phpserve${NC}"
-    echo -e "  • Lihat aliases: ${GREEN}alias${NC}"
+    echo -e "${MAGENTA}${BOLD}Tips arif-it Launcher:${NC}"
+    echo -e "  • Menu ini mirip control panel Laragon."
+    echo -e "  • Gunakan panah atas/bawah untuk memilih menu, Enter untuk eksekusi."
+    echo -e "  • Sangat praktis untuk on/off MySQL, ganti versi PHP, & buka server lokal."
     echo ""
 }
 
@@ -445,12 +513,12 @@ main() {
     cat << 'BANNER'
   ╔═══════════════════════════════════════╗
   ║   🚀 Linux Starter Kit Installer 🚀   ║
-  ║      Modern Development Environment    ║
+  ║      Modern Development Environment   ║
   ╚═══════════════════════════════════════╝
 BANNER
     echo -e "${NC}\n"
     
-    log_info "Versi: 2.0 | Mode: Production Ready"
+    log_info "Versi: 2.1 | Mode: Production Ready + TUI Launcher"
     echo ""
     
     # Checks
@@ -475,6 +543,7 @@ BANNER
     install_micro
     install_tmux
     setup_aliases
+    setup_arif_it_launcher
     
     show_summary
 }
