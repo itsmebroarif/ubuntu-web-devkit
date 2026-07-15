@@ -6,7 +6,34 @@ Dokumen ini merupakan panduan teknis resmi untuk skrip otomatisasi *Starter Kit*
 Dengan mengeksekusi skrip ini, seluruh ekosistem dasar yang dibutuhkan untuk pengembangan web modern—mulai dari manajemen versi PHP tingkat lanjut, pustaka JavaScript terbaru, sistem basis data lokal, manajemen database berbasis web, hingga peralatan berbasis kecerdasan buatan (*AI CLI Tools*)—akan terkonfigurasi secara otomatis tanpa memerlukan intervensi manual.
 
 ---
+# 🚀 Installation & Usage Guide
 
+## Langkah 1: Persiapan Berkas Skrip
+Salin blok kode skrip di atas, lalu buat berkas baru bernama setup.sh di lingkungan Linux lokal Anda dan tempel isinya di sana.
+
+## Langkah 2: Memberikan Izin Eksekusi
+Buka aplikasi Terminal, arahkan navigasi ke tempat berkas tersebut berada, lalu ketik perintah berikut:
+
+## Bash
+
+```
+chmod +x setup.sh
+Langkah 3: Menjalankan Instalasi
+Eksekusi instalasi otomatis dengan perintah berikut:
+```
+
+Bash
+./setup.sh
+Proses ini berjalan sepenuhnya non-interaktif tanpa memerlukan konfirmasi tambahan di tengah proses.
+
+Langkah 4: Memuat Konfigurasi Baru
+Setelah skrip selesai memunculkan baris sukses, muat ulang konfigurasi terminal shell Anda agar pintasan (aliases) dan NVM aktif:
+
+Bash
+source ~/.bashrc
+Sekarang ruang kerja pengembangan Anda sudah sepenuhnya siap digunakan untuk produktivitas kerja harian!
+
+---
 ## 🛠️ Technical Specifications & Architecture
 
 ### 1. Multi-Version PHP Management
